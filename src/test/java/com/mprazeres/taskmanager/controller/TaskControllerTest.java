@@ -90,10 +90,10 @@ class TaskControllerTest {
 
     @Test
     @Order(3)
-    @DisplayName("GET /api/tasks - should return 401 without token")
-    void getTasks_shouldReturn401WithoutToken() throws Exception {
+    @DisplayName("GET /api/tasks - should return 403 without token")
+    void getTasks_shouldReturn403WithoutToken() throws Exception {
         mockMvc.perform(get("/api/tasks"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
