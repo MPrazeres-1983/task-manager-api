@@ -61,7 +61,7 @@ class TaskServiceTest {
         when(taskRepository.findByUserId(1L, pageable))
                 .thenReturn(new PageImpl<>(List.of(task)));
 
-        Page<var> result = taskService.getTasks("mario@test.com", null, null, pageable);
+        var result = taskService.getTasks("mario@test.com", null, null, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().get(0).title()).isEqualTo("Test Task");
