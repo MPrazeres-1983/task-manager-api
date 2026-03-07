@@ -4,15 +4,15 @@
 
 | Component | Current Version | Target Version | Compatibility | Action |
 |-----------|-----------------|----------------|---------------|--------|
-| Java | 17 | 21 | Compatible | Upgrade |
+| Java | 21 | 21 | Already at target | No change |
 | Spring Boot | 3.2.3 | 3.2.3 | Compatible | No change |
 | Dependencies | Various | Compatible | No change |
 
 ## Available Tools
 
-- JDK 17: Installed at C:\Program Files\Java\jdk-17\bin
-- JDK 21: To be installed using install_jdk tool
-- Maven: Wrapper available (mvnw.cmd)
+- JDK 21: Installed at C:\Users\Mario\.jdk\jdk-21.0.8(1)\bin
+- Maven: system installation available at C:\Users\Mario\.maven\maven-3.9.13(1)\bin
+- No wrapper present
 
 ## Key Challenges
 
@@ -21,20 +21,18 @@ Low risk upgrade as Spring Boot 3.2.3 supports Java 21, and all dependencies are
 ## Upgrade Steps
 
 1. **Setup Environment**
-   - Install JDK 21.
+   - Ensure JDK 21 is installed and JAVA_HOME set; already present.
 
 2. **Setup Baseline**
-   - Stash uncommitted changes (if git available).
-   - Run compile and test with current JDK 17, document results.
+   - Stash uncommitted changes (git available).
+   - Run compile and test with current JDK 21 to record baseline results.
 
-3. **Upgrade JDK**
-   - Update `pom.xml` `java.version` property to 21.
-   - Set environment to use JDK 21.
-   - Run compile and test with JDK 21.
+3. **Final Validation**
+   - Confirm project is already targeting Java 21 in `pom.xml`.
+   - Verify compile and all tests pass using JDK 21.
+   - No changes required; upgrade goal already met.
 
-4. **Final Validation**
-   - Verify all goals met, tests pass.
-   - Achieve upgrade success criteria.
+(Note: Original upgrade step was unnecessary because configuration already targets Java 21.)
 
 ## RULES
 

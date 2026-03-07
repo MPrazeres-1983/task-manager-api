@@ -8,7 +8,9 @@ import com.mprazeres.taskmanager.model.enums.Priority;
 import com.mprazeres.taskmanager.model.enums.Status;
 import com.mprazeres.taskmanager.repository.TaskRepository;
 import com.mprazeres.taskmanager.repository.UserRepository;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,7 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Task Controller Integration Tests")
 class TaskControllerTest {
 
@@ -54,7 +55,6 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(1)
     @DisplayName("POST /api/tasks - should create task and return 201")
     void createTask_shouldReturn201() throws Exception {
         TaskRequest request = new TaskRequest(
@@ -72,7 +72,6 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(2)
     @DisplayName("GET /api/tasks - should return 200 with paginated list")
     void getTasks_shouldReturn200WithPage() throws Exception {
         TaskRequest request = new TaskRequest("Task 1", null, null, null, null);
@@ -89,15 +88,23 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(3)
-    @DisplayName("GET /api/tasks - should return 403 without token")
-    void getTasks_shouldReturn403WithoutToken() throws Exception {
+    @DisplayName("GET /api/tasks - should return 401 without token")
+    void getTasks_shouldReturn401WithoutToken() throws Exception {
         mockMvc.perform(get("/api/tasks"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title").value("Unauthorized"));
     }
 
     @Test
-    @Order(4)
+    @DisplayName("GET /api/tasks - should return 401 for malformed token")
+    void getTasks_shouldReturn401ForMalformedToken() throws Exception {
+        mockMvc.perform(get("/api/tasks")
+                        .header("Authorization", "Bearer not-a-real-jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Invalid or expired JWT token"));
+    }
+
+    @Test
     @DisplayName("PATCH /api/tasks/{id}/status - should update status")
     void updateStatus_shouldUpdateAndReturn200() throws Exception {
         TaskRequest create = new TaskRequest("Task", null, Status.TODO, null, null);
@@ -118,7 +125,6 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(5)
     @DisplayName("DELETE /api/tasks/{id} - should delete and return 204")
     void deleteTask_shouldReturn204() throws Exception {
         TaskRequest create = new TaskRequest("To delete", null, null, null, null);
@@ -135,7 +141,6 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(6)
     @DisplayName("GET /api/tasks - should not return tasks from other users")
     void getTasks_shouldIsolateByUser() throws Exception {
         TaskRequest req = new TaskRequest("Private task", null, null, null, null);
@@ -152,7 +157,6 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(7)
     @DisplayName("POST /api/tasks - should return 400 for empty title")
     void createTask_shouldReturn400ForEmptyTitle() throws Exception {
         String payload = "{\"title\": \"\", \"status\": \"TODO\"}";
@@ -164,11 +168,20 @@ class TaskControllerTest {
     }
 
     @Test
-    @Order(8)
     @DisplayName("GET /api/tasks/{id} - should return 404 for unknown task")
     void getTask_shouldReturn404ForUnknownTask() throws Exception {
         mockMvc.perform(get("/api/tasks/9999")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/tasks - should return 400 for invalid enum filter")
+    void getTasks_shouldReturn400ForInvalidEnumFilter() throws Exception {
+        mockMvc.perform(get("/api/tasks")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", "INVALID_STATUS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Invalid Request Parameter"));
     }
 }

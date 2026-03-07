@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -28,13 +30,16 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ConflictException("Email already in use: " + request.email());
+        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedName = request.name().trim();
+
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new ConflictException("Email already in use: " + normalizedEmail);
         }
 
         User user = User.builder()
-                .name(request.name())
-                .email(request.email())
+                .name(normalizedName)
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.password()))
                 .build();
 
@@ -47,16 +52,22 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        String normalizedEmail = normalizeEmail(request.email());
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+                new UsernamePasswordAuthenticationToken(normalizedEmail, request.password())
         );
 
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow();
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtService.generateToken(userDetails);
 
         return new AuthResponse(token, user.getEmail(), user.getName());
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }
