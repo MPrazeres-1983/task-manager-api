@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class TaskService {
@@ -76,8 +78,12 @@ public class TaskService {
 
         task.setTitle(request.title());
         task.setDescription(request.description());
-        if (request.status() != null) task.setStatus(request.status());
-        if (request.priority() != null) task.setPriority(request.priority());
+        if (request.status() != null) {
+            task.setStatus(request.status());
+        }
+        if (request.priority() != null) {
+            task.setPriority(request.priority());
+        }
         task.setDueDate(request.dueDate());
 
         return TaskResponse.from(taskRepository.save(task));
@@ -98,11 +104,10 @@ public class TaskService {
         taskRepository.delete(task);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private User findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        return userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + normalizedEmail));
     }
 
     private Task findTaskByIdAndUser(Long taskId, Long userId) {

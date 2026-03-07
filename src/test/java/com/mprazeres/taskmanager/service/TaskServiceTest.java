@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
@@ -28,7 +27,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TaskService Unit Tests")
@@ -57,7 +57,7 @@ class TaskServiceTest {
     @DisplayName("getTasks — should return paginated tasks for user")
     void getTasks_shouldReturnPagedTasks() {
         PageRequest pageable = PageRequest.of(0, 20);
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.findByUserId(1L, pageable))
                 .thenReturn(new PageImpl<>(List.of(task)));
 
@@ -68,13 +68,26 @@ class TaskServiceTest {
     }
 
     @Test
+    @DisplayName("getTasks — should normalise email lookups")
+    void getTasks_shouldNormaliseEmailLookups() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
+        when(taskRepository.findByUserId(1L, pageable))
+                .thenReturn(new PageImpl<>(List.of(task)));
+
+        taskService.getTasks("  MARIO@Test.com  ", null, null, pageable);
+
+        verify(userRepository).findByEmailIgnoreCase("mario@test.com");
+    }
+
+    @Test
     @DisplayName("createTask — should save and return task")
     void createTask_shouldSaveTask() {
         TaskRequest request = new TaskRequest(
                 "New Task", "Description", Status.TODO, Priority.HIGH,
                 LocalDate.now().plusDays(3));
 
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.save(any(Task.class))).thenAnswer(i -> {
             Task t = i.getArgument(0);
             t.setId(2L);
@@ -87,7 +100,6 @@ class TaskServiceTest {
 
         assertThat(response.title()).isEqualTo("New Task");
         assertThat(response.priority()).isEqualTo(Priority.HIGH);
-        verify(taskRepository).save(any(Task.class));
     }
 
     @Test
@@ -95,7 +107,7 @@ class TaskServiceTest {
     void createTask_shouldApplyDefaults() {
         TaskRequest request = new TaskRequest("Task", null, null, null, null);
 
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.save(any(Task.class))).thenAnswer(i -> {
             Task t = i.getArgument(0);
             t.setId(3L);
@@ -113,7 +125,7 @@ class TaskServiceTest {
     @Test
     @DisplayName("getTask — should throw ResourceNotFoundException for unknown task")
     void getTask_shouldThrowForUnknownTask() {
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.getTask("mario@test.com", 99L))
@@ -124,7 +136,7 @@ class TaskServiceTest {
     @DisplayName("updateStatus — should change status and return updated task")
     void updateStatus_shouldChangeStatus() {
         StatusUpdateRequest statusRequest = new StatusUpdateRequest(Status.DONE);
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(task));
         when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -136,7 +148,7 @@ class TaskServiceTest {
     @Test
     @DisplayName("deleteTask — should delete and not throw for existing task")
     void deleteTask_shouldDeleteTask() {
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(task));
 
         taskService.deleteTask("mario@test.com", 1L);
@@ -148,7 +160,7 @@ class TaskServiceTest {
     @DisplayName("getTasks — should filter by status when provided")
     void getTasks_shouldFilterByStatus() {
         PageRequest pageable = PageRequest.of(0, 20);
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         when(taskRepository.findByUserIdAndStatus(1L, Status.TODO, pageable))
                 .thenReturn(new PageImpl<>(List.of(task)));
 

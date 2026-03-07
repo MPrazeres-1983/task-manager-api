@@ -9,10 +9,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Collections;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JwtService Unit Tests")
@@ -27,6 +25,7 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "secretKey",
                 "TestSecretKeyForJWTThatMustBeAtLeast256BitsLongForTesting!!");
         ReflectionTestUtils.setField(jwtService, "expirationMs", 3600000L);
+        ReflectionTestUtils.invokeMethod(jwtService, "validateConfiguration");
 
         userDetails = User.builder()
                 .username("mario@example.com")
@@ -77,5 +76,21 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "expirationMs", -1000L);
         String token = jwtService.generateToken(userDetails);
         assertThat(jwtService.isTokenValid(token, userDetails)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should reject malformed token")
+    void shouldRejectMalformedToken() {
+        assertThat(jwtService.isTokenValid("not-a-jwt", userDetails)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should fail fast when secret is too short")
+    void shouldFailWhenSecretIsTooShort() {
+        JwtService invalidService = new JwtService();
+        ReflectionTestUtils.setField(invalidService, "secretKey", "short-secret");
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(invalidService, "validateConfiguration"))
+                .hasMessageContaining("JWT secret must be at least 32 bytes long");
     }
 }

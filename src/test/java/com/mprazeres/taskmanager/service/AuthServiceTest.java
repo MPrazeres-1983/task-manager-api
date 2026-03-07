@@ -9,6 +9,7 @@ import com.mprazeres.taskmanager.security.JwtService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,7 +24,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,7 +44,7 @@ class AuthServiceTest {
     void register_shouldCreateUserAndReturnToken() {
         RegisterRequest request = new RegisterRequest("Mário", "mario@test.com", "password123");
 
-        when(userRepository.existsByEmail("mario@test.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("mario@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(i -> {
             User u = i.getArgument(0);
@@ -65,10 +65,30 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Register — should normalise email before save")
+    void register_shouldNormaliseEmailBeforeSave() {
+        RegisterRequest request = new RegisterRequest("Mário", "  MARIO@Test.COM  ", "password123");
+
+        when(userRepository.existsByEmailIgnoreCase("mario@test.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        UserDetails ud = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("mario@test.com")).thenReturn(ud);
+        when(jwtService.generateToken(ud)).thenReturn("jwt-token");
+
+        authService.register(request);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getEmail()).isEqualTo("mario@test.com");
+    }
+
+    @Test
     @DisplayName("Register — should throw ConflictException if email exists")
     void register_shouldThrowIfEmailExists() {
         RegisterRequest request = new RegisterRequest("Mário", "exists@test.com", "password123");
-        when(userRepository.existsByEmail("exists@test.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("exists@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ConflictException.class)
@@ -84,7 +104,7 @@ class AuthServiceTest {
         User user = User.builder().id(1L).name("Mário").email("mario@test.com")
                 .password("hashed").build();
 
-        when(userRepository.findByEmail("mario@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
         UserDetails ud = mock(UserDetails.class);
         when(userDetailsService.loadUserByUsername("mario@test.com")).thenReturn(ud);
         when(jwtService.generateToken(ud)).thenReturn("jwt-token");
@@ -93,6 +113,26 @@ class AuthServiceTest {
 
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.email()).isEqualTo("mario@test.com");
+    }
+
+    @Test
+    @DisplayName("Login — should normalise email before authentication")
+    void login_shouldNormaliseEmailBeforeAuthentication() {
+        LoginRequest request = new LoginRequest("  MARIO@Test.COM  ", "password123");
+        User user = User.builder().id(1L).name("Mário").email("mario@test.com")
+                .password("hashed").build();
+
+        when(userRepository.findByEmailIgnoreCase("mario@test.com")).thenReturn(Optional.of(user));
+        UserDetails ud = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("mario@test.com")).thenReturn(ud);
+        when(jwtService.generateToken(ud)).thenReturn("jwt-token");
+
+        authService.login(request);
+
+        verify(authenticationManager).authenticate(argThat(authentication ->
+                authentication.getName().equals("mario@test.com") &&
+                        authentication.getCredentials().equals("password123")
+        ));
     }
 
     @Test

@@ -2,7 +2,9 @@ package com.mprazeres.taskmanager.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -17,11 +19,21 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
+    private static final int MIN_SECRET_LENGTH_BYTES = 32;
+
     @Value("${app.jwt.secret}")
     private String secretKey;
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
+
+    @PostConstruct
+    void validateConfiguration() {
+        int secretLength = secretKey.getBytes(StandardCharsets.UTF_8).length;
+        if (secretLength < MIN_SECRET_LENGTH_BYTES) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes long");
+        }
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -50,7 +62,7 @@ public class JwtService {
         try {
             final String username = extractUsername(token);
             return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }

@@ -1,6 +1,6 @@
 # Task Manager API
 
-> Production-grade REST API for task management — built with **Java 17 + Spring Boot 3** as part of a deliberate transition into Java fullstack development.
+> REST API for personal task management, built with **Java 17 + Spring Boot 3**.
 
 [![CI Pipeline](https://github.com/MPrazeres-1983/task-manager-api/actions/workflows/ci.yml/badge.svg)](https://github.com/MPrazeres-1983/task-manager-api/actions)
 ![Java](https://img.shields.io/badge/Java-17-blue)
@@ -9,15 +9,16 @@
 
 ## Overview
 
-A fully functional task management REST API with JWT authentication, per-user data isolation, pagination, and filtering. Engineered with the same rigour applied to Python projects — automated tests, CI/CD pipeline, Docker containerisation, and clean layered architecture.
+A task management REST API with:
+- JWT-based authentication
+- per-user data isolation
+- pagination and filtering
+- Docker support
+- automated tests
+- CI pipeline
+- Flyway database migrations
 
-**This project demonstrates:**
-- Java 17 + Spring Boot 3 fullstack fundamentals
-- JWT-based stateless authentication
-- Clean layered architecture (Controller → Service → Repository)
-- 20+ automated tests (unit + integration) with H2 in-memory DB
-- CI/CD via GitHub Actions (build → test → Docker build)
-- Multi-stage Docker build with non-root user
+This project is intended as a **backend portfolio project** focused on clean layering, API contracts, authentication, persistence, testing, and delivery hygiene.
 
 ---
 
@@ -25,7 +26,7 @@ A fully functional task management REST API with JWT authentication, per-user da
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `POST` | `/api/auth/register` | Public | Register new user |
+| `POST` | `/api/auth/register` | Public | Register a new user |
 | `POST` | `/api/auth/login` | Public | Login and get JWT |
 | `GET` | `/api/tasks` | JWT | List tasks (paginated, filterable) |
 | `POST` | `/api/tasks` | JWT | Create task |
@@ -34,7 +35,11 @@ A fully functional task management REST API with JWT authentication, per-user da
 | `PATCH` | `/api/tasks/{id}/status` | JWT | Update status only |
 | `DELETE` | `/api/tasks/{id}` | JWT | Delete task |
 
-**Filter params for `GET /api/tasks`:** `?status=TODO&priority=HIGH&page=0&size=20`
+### Example filter query
+
+```bash
+GET /api/tasks?status=TODO&priority=HIGH&page=0&size=20&sort=createdAt,desc
+```
 
 ---
 
@@ -46,43 +51,55 @@ A fully functional task management REST API with JWT authentication, per-user da
 | Framework | Spring Boot 3.2 |
 | Security | Spring Security + JJWT |
 | Persistence | Spring Data JPA + PostgreSQL |
+| Migrations | Flyway |
 | Validation | Jakarta Bean Validation |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Testing | JUnit 5 + Mockito + MockMvc + H2 |
 | Build | Maven |
 | Containers | Docker + Docker Compose |
-| CI/CD | GitHub Actions |
+| CI | GitHub Actions |
 
 ---
 
 ## Quick Start
 
-### Option 1 — Docker Compose (recommended)
+### Option 1 — Docker Compose
 
 ```bash
 git clone https://github.com/MPrazeres-1983/task-manager-api.git
 cd task-manager-api
-docker-compose up --build
+docker compose up --build
 ```
 
 API available at `http://localhost:8080`
 Swagger UI at `http://localhost:8080/swagger-ui.html`
 
-### Option 2 — Local (requires PostgreSQL)
+> The Docker Compose setup provides local development defaults, including a JWT secret for local use only.
+
+### Option 2 — Local Maven run
+
+Create environment variables first. You can copy `.env.example` as a reference.
 
 ```bash
-# 1. Clone
-git clone https://github.com/MPrazeres-1983/task-manager-api.git
-cd task-manager-api
-
-# 2. Set environment variables (or edit application.yml)
 export DB_URL=jdbc:postgresql://localhost:5432/taskmanager
 export DB_USER=postgres
 export DB_PASS=postgres
-export JWT_SECRET=YourSecretKeyHereAtLeast256BitsLong!!
+export JWT_SECRET=ReplaceThisWithARealSecretAtLeast32BytesLong
+export JWT_EXPIRATION_MS=86400000
+```
 
-# 3. Run
-./mvnw spring-boot:run
+Then run:
+
+```bash
+mvn spring-boot:run
+```
+
+### Optional — generate Maven Wrapper
+
+If you want `./mvnw` support in the repository, generate it locally:
+
+```bash
+mvn -N wrapper:wrapper
 ```
 
 ---
@@ -90,80 +107,61 @@ export JWT_SECRET=YourSecretKeyHereAtLeast256BitsLong!!
 ## Running Tests
 
 ```bash
-# All tests (uses H2 in-memory — no DB needed)
-./mvnw test
-
-# With test report
-./mvnw test surefire-report:report
+mvn clean verify
 ```
 
-Test coverage includes:
-- `JwtServiceTest` — token generation, validation, expiry
-- `AuthServiceTest` — register, login, duplicate email, bad credentials
-- `TaskServiceTest` — CRUD, defaults, isolation, filtering
-- `AuthControllerTest` — full HTTP integration tests (register, login, validation)
-- `TaskControllerTest` — full HTTP integration tests (CRUD, auth, user isolation)
+This runs:
+- unit tests
+- integration tests
+- JaCoCo coverage report generation
+
+Useful outputs:
+- `target/surefire-reports/`
+- `target/site/jacoco/index.html`
 
 ---
 
-## Example Usage
+## Design Notes
 
-### Register
+### Why Flyway?
+The project now uses **schema migrations** instead of relying on Hibernate schema updates. That makes the repository look more disciplined and closer to real-world backend workflows.
 
-```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Mario","email":"mario@example.com","password":"password123"}'
-```
+### Why email normalisation?
+Emails are trimmed and normalised to lowercase before authentication and persistence. This avoids avoidable duplicate-account edge cases.
 
-Response:
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "email": "mario@example.com",
-  "name": "Mario"
-}
-```
-
-### Create Task
-
-```bash
-curl -X POST http://localhost:8080/api/tasks \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Deploy to production","priority":"HIGH","dueDate":"2025-06-01"}'
-```
-
-### List Tasks with Filters
-
-```bash
-curl "http://localhost:8080/api/tasks?status=TODO&priority=HIGH" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+### Why a custom authentication entry point?
+Protected endpoints now return **401 Unauthorized** with a structured problem response, instead of vague default behaviour.
 
 ---
 
 ## Project Structure
 
-```
+```text
 src/
 ├── main/java/com/mprazeres/taskmanager/
 │   ├── config/          # Security + OpenAPI config
-│   ├── controller/      # HTTP layer (AuthController, TaskController)
-│   ├── dto/             # Request/Response records
-│   ├── exception/       # Custom exceptions + GlobalExceptionHandler
-│   ├── model/           # JPA entities (User, Task) + enums
+│   ├── controller/      # HTTP layer
+│   ├── dto/             # Request/response records
+│   ├── exception/       # ProblemDetail-based error handling
+│   ├── model/           # JPA entities + enums
 │   ├── repository/      # Spring Data JPA repositories
-│   ├── security/        # JWT filter, JwtService, UserDetailsService
-│   └── service/         # Business logic (AuthService, TaskService)
-└── test/                # Unit tests + integration tests
+│   ├── security/        # JWT services, filter, auth entry point
+│   └── service/         # Business logic
+├── main/resources/
+│   ├── application.yml
+│   └── db/migration/    # Flyway migrations
+└── test/                # Unit + integration tests
 ```
 
 ---
 
-## Design Decisions
+## Suggested Next Improvements
 
-See [TECHNICAL_REPORT.pdf](./TECHNICAL_REPORT.pdf) for a full explanation of every architectural decision, from JWT stateless auth to the Repository pattern and test strategy.
+- add public demo deployment
+- add refresh-token flow or token revocation strategy
+- add coverage badge
+- add sorting/search enhancements
+- add request/response examples to Swagger screenshots
 
 ---
 
@@ -175,4 +173,4 @@ See [TECHNICAL_REPORT.pdf](./TECHNICAL_REPORT.pdf) for a full explanation of eve
 
 ## License
 
-MIT
+MIT — see the `LICENSE` file.
