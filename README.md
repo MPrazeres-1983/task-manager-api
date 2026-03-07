@@ -1,9 +1,9 @@
 # Task Manager API
 
-> REST API for personal task management, built with **Java 17 + Spring Boot 3**.
+> REST API for personal task management, built with **Java 21 + Spring Boot 3**.
 
 [![CI Pipeline](https://github.com/MPrazeres-1983/task-manager-api/actions/workflows/ci.yml/badge.svg)](https://github.com/MPrazeres-1983/task-manager-api/actions)
-![Java](https://img.shields.io/badge/Java-17-blue)
+![Java](https://img.shields.io/badge/Java-21-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -47,7 +47,7 @@ GET /api/tasks?status=TODO&priority=HIGH&page=0&size=20&sort=createdAt,desc
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Java 17 |
+| Language | Java 21 |
 | Framework | Spring Boot 3.2 |
 | Security | Spring Security + JJWT |
 | Persistence | Spring Data JPA + PostgreSQL |
