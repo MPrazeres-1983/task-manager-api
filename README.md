@@ -1,9 +1,9 @@
 # Task Manager API
 
-> Enterprise-style task management REST API built with **Java 21** and **Spring Boot 3**.
+> Enterprise-style task management REST API built with **Java 17** and **Spring Boot 3**.
 
 [![CI Pipeline](https://github.com/MPrazeres-1983/task-manager-api/actions/workflows/ci.yml/badge.svg)](https://github.com/MPrazeres-1983/task-manager-api/actions)
-![Java](https://img.shields.io/badge/Java-21-blue)
+![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -57,7 +57,7 @@ GET /api/tasks?status=TODO&priority=HIGH&page=0&size=20&sort=createdAt,desc
 
 | Layer | Technology |
 | ----- | ---------- |
-| Language | Java 21 |
+| Language | Java 17 |
 | Framework | Spring Boot 3.2 |
 | Security | Spring Security + JJWT |
 | Persistence | Spring Data JPA + PostgreSQL |
@@ -338,3 +338,10 @@ Each user can only access their own tasks. This is one of the most important sec
 ## License
 
 MIT — see the [LICENSE](LICENSE) file.
+
+
+## Nota de manutenção — compatibilidade Java
+
+A configuração efetiva do projeto está padronizada em **Java 17**: `pom.xml`, Dockerfile e GitHub Actions. A descrição curta do repositório no GitHub deve também ser atualizada nas definições do repositório (atualmente refere Java 21). A versão mínima da JVM não deve ser confundida com suporte testado a outra versão.
+
+Em produção, definir `DB_URL`, `DB_USER`, `DB_PASS` e `JWT_SECRET` através de segredos do ambiente. Os valores de exemplo do Compose e as credenciais locais não são adequados a uma instalação pública.
